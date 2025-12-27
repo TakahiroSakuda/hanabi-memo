@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>花火メモアプリ</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+.card-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.card-item {
+  flex: 1 1 18%;
+  min-width: 90px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  text-align: center;
+}
+.card-item.confirmed {
+  border: 3px solid #198754;
+  background-color: #e6f4ea;
+}
+
+.candidate {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  margin: 2px;
+  border: 1px solid #000;
+}
+.candidate-number {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  border-radius: 50%;
+  border: 1px solid #000;
+  margin: 2px;
+  font-size: 0.8rem;
+}
+
+.flex-single {
+  display: flex;
+  gap: 5px;
+}
+.flex-single button {
+  flex: 1;
+}
+
+.confirmed-label {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #198754;
+  display: none;
+}
+
+/* 淡色ボタン */
+.btn-light-add {
+  background-color: #cce5ff;
+  border: 1px solid #99c2ff;
+}
+.btn-light-undo {
+  background-color: #ffe5cc;
+  border: 1px solid #ffb380;
+}
+</style>
+</head>
+
+<body>
+<div class="container mt-4">
+  <h2 class="text-center mb-4">花火メモアプリ</h2>
+
+  <!-- 設定 -->
+  <div id="settings">
+    <div>手札枚数</div>
+    <div id="handSizeButtons" class="mb-2">
+      <button class="btn btn-outline-primary btn-toggle" data-value="4">4枚</button>
+      <button class="btn btn-outline-primary btn-toggle" data-value="5">5枚</button>
+    </div>
+
+    <div>色の数</div>
+    <div id="colorCountButtons" class="mb-3">
+      <button class="btn btn-outline-secondary btn-toggle" data-value="5">5色</button>
+      <button class="btn btn-outline-secondary btn-toggle" data-value="6">6色</button>
+    </div>
+
+    <button class="btn btn-success" id="startBtn">開始</button>
+  </div>
+
+  <!-- ゲーム -->
+  <div id="game" style="display:none;">
+    <h5>自分の手札</h5>
+    <div class="card-container mb-4" id="handContainer"></div>
+
+    <h5>ヒント入力</h5>
+
+    <div class="mb-2">
+      <div>対象カード</div>
+      <div id="cardButtons" class="flex-single"></div>
+    </div>
+
+    <div class="mb-2">
+      <div>色ヒント（択一）</div>
+      <div id="colorButtons" class="flex-single"></div>
+    </div>
+
+    <div class="mb-2">
+      <div>数字ヒント（択一）</div>
+      <div id="numberButtons" class="flex-single"></div>
+    </div>
+
+    <button class="btn btn-light-add w-100 mb-2" id="addHintBtn">ヒントを追加</button>
+    <button class="btn btn-light-undo w-100 mb-3" id="undoBtn">Undo</button>
+
+    <h5>ヒント履歴</h5>
+    <ul class="list-group" id="hintHistory"></ul>
+  </div>
+</div>
+
+<script>
+const baseColors = ["red","blue","green","yellow","white","purple"];
+const colorLabels = { red:"赤", blue:"青", green:"緑", yellow:"黄", white:"白", purple:"紫" };
+
+const state = {
+  handSize: 5,
+  colorCount: 6,
+  colors: [],
+  numbers: ["1","2","3","4","5"],
+  handCandidates: [],
+  history: []
+};
+
+function lightenColor(c){
+  return {
+    red:"#ff9999", blue:"#99ccff", green:"#99ff99",
+    yellow:"#ffff99", white:"#f2f2f2", purple:"#cc99ff"
+  }[c];
+}
+
+/* 開始 */
+document.getElementById("startBtn").onclick = () => {
+  const h = document.querySelector("#handSizeButtons .active");
+  const c = document.querySelector("#colorCountButtons .active");
+  if(!h || !c){ alert("設定してください"); return; }
+
+  state.handSize = +h.dataset.value;
+  state.colorCount = +c.dataset.value;
+  state.colors = baseColors.slice(0, state.colorCount);
+
+  initGame();
+  settings.style.display="none";
+  game.style.display="block";
+};
+
+function initGame(){
+  state.handCandidates = Array.from({length: state.handSize}, () => ({
+    colors:[...state.colors], numbers:[...state.numbers]
+  }));
+  state.history = [];
+  renderHand();
+  renderCandidates();
+  initHintButtons();
+  hintHistory.innerHTML="";
+}
+
+/* 手札 */
+function renderHand(){
+  handContainer.innerHTML="";
+  state.handCandidates.forEach((_,i)=>{
+    const d=document.createElement("div");
+    d.className="card-item";
+    d.id=`card${i}`;
+    d.innerHTML=`
+      <div>カード${i+1}</div>
+      <div id="candidates${i}"></div>
+      <div class="confirmed-label" id="confirmed${i}">確定</div>
+      <button class="btn btn-sm btn-outline-success mt-2"
+        onclick="resetCard(${i})">出した／捨てた</button>`;
+    handContainer.appendChild(d);
+  });
+}
+
+/* 候補＋確定 */
+function renderCandidates(){
+  state.handCandidates.forEach((card,i)=>{
+    const d=document.getElementById(`candidates${i}`);
+    d.innerHTML="";
+    card.colors.forEach(c=>{
+      const s=document.createElement("span");
+      s.className="candidate";
+      s.style.backgroundColor=lightenColor(c);
+      d.appendChild(s);
+    });
+    d.appendChild(document.createElement("br"));
+    card.numbers.forEach(n=>{
+      const s=document.createElement("span");
+      s.className="candidate-number";
+      s.textContent=n;
+      d.appendChild(s);
+    });
+
+    const ok=card.colors.length===1&&card.numbers.length===1;
+    document.getElementById(`card${i}`).classList.toggle("confirmed",ok);
+    document.getElementById(`confirmed${i}`).style.display=ok?"block":"none";
+  });
+}
+
+/* ヒントボタン */
+function initHintButtons(){
+  cardButtons.innerHTML=colorButtons.innerHTML=numberButtons.innerHTML="";
+
+  for(let i=0;i<state.handSize;i++){
+    const b=document.createElement("button");
+    b.className="btn btn-outline-dark";
+    b.textContent=`カード${i+1}`;
+    b.onclick=()=>b.classList.toggle("active");
+    cardButtons.appendChild(b);
+  }
+
+  state.colors.forEach(c=>{
+    const b=document.createElement("button");
+    b.className="btn";
+    b.style.backgroundColor=lightenColor(c);
+    b.textContent=colorLabels[c];
+    b.onclick=()=>{
+      clearActive(numberButtons);
+      toggleSingle(colorButtons,b);
+    };
+    colorButtons.appendChild(b);
+  });
+
+  state.numbers.forEach(n=>{
+    const b=document.createElement("button");
+    b.className="btn btn-outline-secondary";
+    b.textContent=n;
+    b.onclick=()=>{
+      clearActive(colorButtons);
+      toggleSingle(numberButtons,b);
+    };
+    numberButtons.appendChild(b);
+  });
+}
+
+function toggleSingle(container,btn){
+  [...container.children].forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+}
+function clearActive(container){
+  [...container.children].forEach(b=>b.classList.remove("active"));
+}
+
+/* ヒント追加 */
+addHintBtn.onclick=()=>{
+  const targets=[...cardButtons.children]
+    .map((b,i)=>b.classList.contains("active")?i:null)
+    .filter(i=>i!==null);
+
+  const colorBtn=colorButtons.querySelector(".active");
+  const numBtn=numberButtons.querySelector(".active");
+  if(!colorBtn&&!numBtn)return;
+
+  state.history.push(JSON.parse(JSON.stringify(state.handCandidates)));
+
+  applyHint(targets,colorBtn?.textContent,numBtn?.textContent);
+  renderCandidates();
+  addHistory(targets,colorBtn,numBtn);
+
+  // ★ 選択状態の初期化
+  clearActive(cardButtons);
+  clearActive(colorButtons);
+  clearActive(numberButtons);
+};
+
+function applyHint(targets,colorLabel,number){
+  const colorKey=colorLabel
+    ?Object.keys(colorLabels).find(k=>colorLabels[k]===colorLabel)
+    :null;
+
+  state.handCandidates.forEach((card,i)=>{
+    const hit=targets.length===0||targets.includes(i);
+    if(colorKey){
+      card.colors=card.colors.filter(c=>hit?c===colorKey:c!==colorKey);
+    }
+    if(number){
+      card.numbers=card.numbers.filter(n=>hit?n===number:n!==number);
+    }
+  });
+}
+
+/* Undo */
+undoBtn.onclick=()=>{
+  if(!state.history.length)return;
+  state.handCandidates=state.history.pop();
+  hintHistory.firstChild?.remove(); // 最新を削除
+  renderCandidates();
+};
+
+/* 履歴（最新が上） */
+function addHistory(targets,colorBtn,numBtn){
+  const li=document.createElement("li");
+  li.className="list-group-item";
+  const t=targets.length?targets.map(i=>`カード${i+1}`).join("・"):"該当なし";
+  li.textContent=colorBtn
+    ?`色ヒント：${colorBtn.textContent}（${t}）`
+    :`数字ヒント：${numBtn.textContent}（${t}）`;
+  hintHistory.prepend(li); // 最新を上に追加
+}
+
+/* リセット */
+function resetCard(i){
+  state.handCandidates[i]={colors:[...state.colors],numbers:[...state.numbers]};
+  renderCandidates();
+}
+
+/* 設定ボタン */
+document.querySelectorAll(".btn-toggle").forEach(b=>{
+  b.onclick=()=>{
+    [...b.parentNode.children].forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+  };
+});
+</script>
+</body>
+</html>
