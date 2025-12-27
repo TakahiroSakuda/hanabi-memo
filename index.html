@@ -9,18 +9,19 @@
 <style>
 .card-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 6px;
 }
 
 .card-item {
-  flex: 1 1 18%;
-  min-width: 80px;
-  padding: 10px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px;
   border: 2px solid #ccc;
   border-radius: 6px;
   text-align: center;
   cursor: pointer;
+  font-size: 0.75rem;
 }
 
 .card-item.selected {
@@ -30,31 +31,35 @@
 
 .candidate {
   display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  margin: 2px;
+  margin: 1px;
   border: 1px solid #000;
 }
 
 .candidate-number {
   display: inline-block;
-  width: 18px;
-  height: 18px;
-  line-height: 18px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
   border-radius: 50%;
   border: 1px solid #000;
-  margin: 2px;
-  font-size: 0.8rem;
+  margin: 1px;
+  font-size: 0.7rem;
 }
 
 .flex-single {
   display: flex;
-  gap: 5px;
+  flex-wrap: nowrap;
+  gap: 4px;
 }
 
 .flex-single .btn {
   flex: 1 1 0;
+  padding: 6px 0;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .btn-toggle.active {
@@ -74,68 +79,52 @@
 </head>
 
 <body>
-<div class="container mt-4">
+<div class="container mt-3">
 
-<h1 class="text-center mb-3">花火メモアプリ</h1>
+<h5 class="text-center mb-2">花火メモアプリ</h5>
 
-<!-- 使い方 -->
-<details class="mb-4">
-  <summary class="h6">📖 使い方（30秒で読める）</summary>
-  <div class="small mt-2">
-    <ol>
-      <li>手札枚数・色数を選んで開始</li>
-      <li><strong>ヒント対象のカードを直接タップ</strong></li>
-      <li>色 or 数字を1つ選んで「ヒントを追加」</li>
-      <li>カードを出した／捨てたら「プレイ」</li>
-    </ol>
-  </div>
+<details class="mb-3">
+  <summary class="small">📖 使い方（30秒）</summary>
+  <ol class="small mt-2">
+    <li>カードを直接タップして対象選択</li>
+    <li>色 or 数字を1つ選択</li>
+    <li>ヒントを追加</li>
+  </ol>
 </details>
 
-<!-- 設定 -->
 <div id="settings">
-  <div class="mb-2">手札枚数</div>
-  <div id="handSizeButtons" class="mb-3">
-    <button class="btn btn-outline-primary btn-toggle" data-value="4">4枚</button>
-    <button class="btn btn-outline-primary btn-toggle" data-value="5">5枚</button>
+  <div class="mb-2 small">手札枚数</div>
+  <div id="handSizeButtons" class="mb-2">
+    <button class="btn btn-outline-primary btn-toggle" data-value="4">4</button>
+    <button class="btn btn-outline-primary btn-toggle" data-value="5">5</button>
   </div>
 
-  <div class="mb-2">色の数</div>
+  <div class="mb-2 small">色数</div>
   <div id="colorCountButtons" class="mb-3">
-    <button class="btn btn-outline-secondary btn-toggle" data-value="5">5色</button>
-    <button class="btn btn-outline-secondary btn-toggle" data-value="6">6色</button>
+    <button class="btn btn-outline-secondary btn-toggle" data-value="5">5</button>
+    <button class="btn btn-outline-secondary btn-toggle" data-value="6">6</button>
   </div>
 
   <button class="btn btn-success w-100" id="startGameBtn">開始</button>
 
-  <!-- QRコード -->
-  <div class="mt-4 text-center">
-    <div class="small text-muted mb-1">📱 共有用QRコード</div>
+  <div class="mt-3 text-center">
     <div id="qrCode"></div>
   </div>
 </div>
 
-<!-- ゲーム -->
 <div id="game" style="display:none;">
-  <h5>手札（タップして対象選択）</h5>
-  <div class="card-container mb-3" id="handContainer"></div>
+  <div class="card-container mb-2" id="handContainer"></div>
 
-  <h5>ヒント入力</h5>
+  <div class="mb-1 small">色ヒント</div>
+  <div id="colorButtons" class="flex-single mb-2"></div>
 
-  <div class="mb-2">
-    <div>色ヒント（択一）</div>
-    <div id="colorButtons" class="flex-single"></div>
-  </div>
+  <div class="mb-1 small">数字ヒント</div>
+  <div id="numberButtons" class="flex-single mb-2"></div>
 
-  <div class="mb-2">
-    <div>数字ヒント（択一）</div>
-    <div id="numberButtons" class="flex-single"></div>
-  </div>
+  <button class="btn btn-light-add w-100 mb-2" id="addHintBtn">ヒント追加</button>
+  <button class="btn btn-light-undo w-100 mb-2" id="undoBtn">Undo</button>
 
-  <button class="btn btn-light-add w-100 mb-2" id="addHintBtn">ヒントを追加</button>
-  <button class="btn btn-light-undo w-100 mb-3" id="undoBtn">Undo</button>
-
-  <h5>ヒント履歴</h5>
-  <ul class="list-group" id="hintHistory"></ul>
+  <ul class="list-group small" id="hintHistory"></ul>
 </div>
 
 </div>
@@ -143,59 +132,43 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <script>
-let handSize = 5;
-let colorCount = 6;
-let colors = [];
-let numbers = ["1","2","3","4","5"];
-let handCandidates = [];
-let history = [];
-let selectedCards = new Set();
+let handSize=5,colorCount=6;
+let colors=[],numbers=["1","2","3","4","5"];
+let handCandidates=[],history=[],selectedCards=new Set();
+const baseColors=["red","blue","green","yellow","white","purple"];
 
-const baseColors = ["red","blue","green","yellow","white","purple"];
+const lightenColor=c=>({
+  red:"#ff9999",blue:"#99ccff",green:"#99ff99",
+  yellow:"#ffff99",white:"#f2f2f2",purple:"#cc99ff"
+}[c]);
 
-function lightenColor(c){
-  return {
-    red:"#ff9999", blue:"#99ccff", green:"#99ff99",
-    yellow:"#ffff99", white:"#f2f2f2", purple:"#cc99ff"
-  }[c];
-}
-
-function setupToggle(id){
+const setupToggle=id=>{
   document.querySelectorAll(`#${id} .btn-toggle`).forEach(b=>{
     b.onclick=()=>{
       document.querySelectorAll(`#${id} .btn-toggle`).forEach(x=>x.classList.remove("active"));
       b.classList.add("active");
     };
   });
-}
-
+};
 setupToggle("handSizeButtons");
 setupToggle("colorCountButtons");
 
-new QRCode(document.getElementById("qrCode"), {
-  text: "https://takahirosakuda.github.io/hanabi-memo/",
-  width: 128,
-  height: 128
-});
+new QRCode(qrCode,{text:"https://takahirosakuda.github.io/hanabi-memo/",width:128,height:128});
 
 startGameBtn.onclick=()=>{
   const h=document.querySelector("#handSizeButtons .active");
   const c=document.querySelector("#colorCountButtons .active");
-  if(!h||!c) return alert("選択してください");
-
+  if(!h||!c) return;
   handSize=+h.dataset.value;
   colorCount=+c.dataset.value;
   colors=baseColors.slice(0,colorCount);
-
   initGame();
   settings.style.display="none";
   game.style.display="block";
 };
 
 function initGame(){
-  handCandidates=Array(handSize).fill().map(()=>({
-    colors:[...colors], numbers:[...numbers]
-  }));
+  handCandidates=Array(handSize).fill().map(()=>({colors:[...colors],numbers:[...numbers]}));
   history=[];
   hintHistory.innerHTML="";
   selectedCards.clear();
@@ -208,27 +181,11 @@ function renderHand(){
   handCandidates.forEach((_,i)=>{
     const d=document.createElement("div");
     d.className="card-item";
-    d.innerHTML=`
-      <div>カード${i+1}</div>
-      <div id="candidates${i}"></div>
-      <button class="btn btn-sm btn-outline-success mt-2">プレイ</button>
-    `;
-
+    d.innerHTML=`<div>カード${i+1}</div><div id="c${i}"></div>`;
     d.onclick=()=>{
       d.classList.toggle("selected");
-      d.classList.contains("selected")
-        ? selectedCards.add(i)
-        : selectedCards.delete(i);
+      d.classList.contains("selected")?selectedCards.add(i):selectedCards.delete(i);
     };
-
-    d.querySelector("button").onclick=(e)=>{
-      e.stopPropagation();
-      handCandidates[i]={colors:[...colors],numbers:[...numbers]};
-      d.classList.remove("selected");
-      selectedCards.delete(i);
-      renderCandidates();
-    };
-
     handContainer.appendChild(d);
   });
   renderCandidates();
@@ -236,7 +193,7 @@ function renderHand(){
 
 function renderCandidates(){
   handCandidates.forEach((c,i)=>{
-    const d=document.getElementById(`candidates${i}`);
+    const d=document.getElementById(`c${i}`);
     d.innerHTML="";
     c.colors.forEach(x=>{
       const s=document.createElement("span");
@@ -257,12 +214,11 @@ function renderCandidates(){
 function initHintButtons(){
   colorButtons.innerHTML="";
   numberButtons.innerHTML="";
-
   colors.forEach(c=>{
     const b=document.createElement("button");
     b.className="btn btn-toggle";
-    b.textContent=c;
     b.style.background=lightenColor(c);
+    b.textContent=c;
     b.onclick=()=>{
       document.querySelectorAll("#numberButtons .active").forEach(x=>x.classList.remove("active"));
       document.querySelectorAll("#colorButtons .btn").forEach(x=>x.classList.remove("active"));
@@ -270,7 +226,6 @@ function initHintButtons(){
     };
     colorButtons.appendChild(b);
   });
-
   numbers.forEach(n=>{
     const b=document.createElement("button");
     b.className="btn btn-toggle btn-outline-secondary";
@@ -285,32 +240,26 @@ function initHintButtons(){
 }
 
 addHintBtn.onclick=()=>{
-  const colorBtn=document.querySelector("#colorButtons .active");
-  const numBtn=document.querySelector("#numberButtons .active");
-  if(!colorBtn && !numBtn) return;
-
+  const c=document.querySelector("#colorButtons .active");
+  const n=document.querySelector("#numberButtons .active");
+  if(!c&&!n) return;
   history.push(JSON.parse(JSON.stringify(handCandidates)));
-
-  handCandidates.forEach((c,i)=>{
-    if(selectedCards.size && !selectedCards.has(i)){
-      if(colorBtn) c.colors=c.colors.filter(x=>x!==colorBtn.textContent);
-      if(numBtn) c.numbers=c.numbers.filter(x=>x!==numBtn.textContent);
-    }
+  handCandidates.forEach((x,i)=>{
     if(selectedCards.has(i)){
-      if(colorBtn) c.colors=[colorBtn.textContent];
-      if(numBtn) c.numbers=[numBtn.textContent];
+      if(c) x.colors=[c.textContent];
+      if(n) x.numbers=[n.textContent];
+    }else{
+      if(c) x.colors=x.colors.filter(v=>v!==c.textContent);
+      if(n) x.numbers=x.numbers.filter(v=>v!==n.textContent);
     }
   });
-
   const li=document.createElement("li");
   li.className="list-group-item";
-  li.textContent=`${colorBtn?"色":"数字"}:${colorBtn?.textContent||numBtn.textContent}`;
+  li.textContent=(c?"色:":"数字:")+(c?.textContent||n.textContent);
   hintHistory.prepend(li);
-
-  document.querySelectorAll(".btn-toggle.active").forEach(b=>b.classList.remove("active"));
-  document.querySelectorAll(".card-item.selected").forEach(c=>c.classList.remove("selected"));
+  document.querySelectorAll(".active").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".card-item").forEach(c=>c.classList.remove("selected"));
   selectedCards.clear();
-
   renderCandidates();
 };
 
